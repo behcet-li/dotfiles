@@ -1,0 +1,258 @@
+#! /bin/bash
+
+function link {
+  if [[ -L "$2" ]]; then
+    # it is a symlink. delete it
+    rm -rf "$2" 2>/dev/null
+  elif [[ -e "$2" ]]; then
+    # back up old file
+    mv -f "$2" "$2.old" 2>/dev/null
+  fi
+  ln -s "$1" "$2"
+  printf "Linking %s\n" "$2"
+}
+
+function confirm () {
+  command -v whiptail >/dev/null 2>&1
+  if [[ $? -eq 0 ]]; then
+    whiptail --yesno "$1" 10 80 && return 0
+  else
+    local question
+    question=$(printf "%s (y/n)\n" "$1")
+    read -p "$question" -n 1 -r response
+    echo
+    response=${response,,} #toLower
+    if [[ $response =~ y ]]; then
+      return 0
+    fi
+  fi
+  return 1
+}
+
+function require () {
+  dpkg-query --show "$*" > /dev/null 2> /dev/null
+  local ret=$?
+  return $ret;
+}
+
+function configfiles () {
+  printf "Linking config files...\n"
+  link "$source_dir"/rcfiles/tmux.conf ~/.tmux.conf
+  link "$source_dir"/rcfiles/jscsrc ~/.jscsrc
+  link "$source_dir"/rcfiles/jshintrc ~/.jshintrc
+  link "$source_dir"/rcfiles/jsbeautifyrc ~/.jsbeautifyrc
+  link "$source_dir"/rcfiles/editorconfig ~/.editorconfig
+  link "$source_dir"/rcfiles/iftoprc ~/.iftoprc
+  link "$source_dir"/rcfiles/gitconfig ~/.gitconfig
+  mkdir -p ~/.config/yamllint
+  link "$source_dir"/rcfiles/yamllint ~/.config/yamllint/config
+}
+
+# ~/bin/
+function bins () {
+  printf "Linking bins...\n"
+  mkdir -p ~/bin 2>/dev/null
+  link "$source_dir"/bin/vimcat ~/bin/vimcat
+  link ~/bin/vimcat ~/bin/vcat
+  link "$source_dir"/bin/sp ~/bin/sp
+  link "$source_dir"/bin/tmux-nowplaying ~/bin/tmux-nowplaying
+  link "$source_dir"/bin/a2dp.py ~/bin/a2dp.py
+}
+
+function installvim () {
+  require vim
+  if [ $? -ne 0 ]; then
+    echo "Can not install vim config without vim. Skipping"
+    return 1
+  fi
+  require sed
+  if [ $? -ne 0 ]; then
+    echo "Can not install vim config without sed. Skipping"
+    return 1
+  fi
+  local existing_install=false
+  [[ -d ~/.vim/bundle/vundle/.git ]] && existing_install=true
+  if $existing_install && confirm "Do you want to purge existing vim installation?"; then
+    existing_install=false
+    cp -r ~/.vim ~/.vim.old 2>/dev/null
+    rm -fr ~/.vim 2>/dev/null
+  fi
+
+  mkdir -p ~/.vim/sessions 2>/dev/null
+  cd ~/.vim || {
+    echo "Cannot create \~/.vim !"
+    exit 1
+  }
+
+  # install config
+  link "$source_dir/vim/vimrc" ~/.vim/vimrc
+  link ~/.vim/vimrc ~/.vimrc
+  link "$source_dir/vim/bundles.vim" ~/.vim/bundles.vim
+
+  # Comment YCM line
+  sed -ri 's/^(Plugin.*YouCompleteMe)/" \1/' "$source_dir"/vim/bundles.vim
+  local install_ycm=false
+
+  # YCM deps
+  (require python-dev || require python3-dev) &&
+    require build-essential &&
+    require cmake
+
+  if [ $? -eq 0 ]; then
+    if confirm "Do you want to setup YouCompleteMe?"; then
+      # Uncomment YCM line
+      sed -ri 's/" (Plugin.*YouCompleteMe)/\1/' "$source_dir"/vim/bundles.vim
+      install_ycm=true
+    fi
+  else
+    echo "Skipping YouCompleteMe because of missing dependencies: python3-dev build-essential cmake"
+  fi
+
+  echo
+  if $existing_install; then
+    echo "Updating vim plugins..."
+    vim +PluginUpdate +qa!
+  else
+    echo "Installing vim plugins..."
+    # Work around to quiet YCM errors and xolox/session during install
+    cat > install_bundles.vim <<-EOF
+    let g:session_autosave='no'
+    let g:session_autoload='no'
+    let g:ycm_check_if_ycm_core_present=0
+    silent! runtime bundles.vim
+EOF
+    # Run vim to install and quit right after
+    vim -c q -u install_bundles.vim -c q
+    rm install_bundles.vim
+  fi
+
+  if command -v npm; then
+    cd ~/.vim/bundle/tern_for_vim || {
+    echo "Can not find tern_for_vim"
+    } && npm i
+  fi
+
+  if [ $install_ycm = true ]; then
+    cd ~/.vim/bundle/YouCompleteMe/ || {
+      echo "Can not find YouCompleteMe installation!"
+      exit 1
+    }
+
+    local ycm_build_args='--clang-completer'
+    if command -v go; then
+      ycm_build_args="${ycm_build_args} --gocode-completer"
+    else
+      echo "go not found! Skipping YouCompleteMe golang completion"
+    fi
+    if command -v npm; then
+      ycm_build_args="${ycm_build_args} --tern-completer"
+    else
+      echo "npm not found! Skipping YouCompleteMe JavaScript completion"
+    fi
+
+    echo "Building YouCompleteMe with flags" "$ycm_build_args"
+
+    # YCM_CORES=1
+    # shellcheck disable=SC2086
+    ~/.vim/bundle/YouCompleteMe/install.py $ycm_build_args
+  fi
+  echo "Done!"
+}
+
+function installzsh () {
+  require zsh
+  if [ $? -ne 0 ]; then
+    echo "Can not install omz without zsh. Skipping"
+    return 1
+  fi
+
+  local existing_install=false
+  command -v "$ZSH/tools/upgrade.sh" >/dev/null 2>&1
+  [ $? -eq 0 ] && existing_install=true
+
+  if [ $existing_install = true ]; then
+    if confirm "Do you want to upgrade oh-my-zsh?"; then
+      sh "$ZSH/tools/upgrade.sh"
+    fi
+  else
+    require curl
+    if [ $? -ne 0 ]; then
+      echo "Can not install oh-my-zsh without curl. Aborting."
+      exit 1
+    fi
+    if confirm "Do you want to install oh-my-zsh?"; then
+      rm -rf ~/.oh-my-zsh
+      sh -c "$(curl -fsSL https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh)" && existing_install=true
+    else
+      return 0
+    fi
+  fi
+
+  if [ $existing_install != true ]; then
+    echo "Could not install oh-my-zsh. Aborting"
+    exit 1
+  fi
+
+  printf "\nInstalling custom zsh files...\n"
+  link "$source_dir"/zsh/zshrc ~/.zshrc
+
+  # Custom plugins
+  target=~/.oh-my-zsh/custom/plugins/man-colors
+  mkdir -p "$target" 2> /dev/null
+  link "$source_dir"/zsh/man-colors.plugin.zsh "$target"/man-colors.plugin.zsh
+
+  target=~/.oh-my-zsh/custom/plugins/tmux-title
+  mkdir -p "$target" 2> /dev/null
+  link "$source_dir"/zsh/tmux-title.plugin.zsh "$target"/tmux-title.plugin.zsh
+
+  # Custom theme
+  link "$source_dir"/zsh/okkuz.zsh-theme ~/.oh-my-zsh/custom/okkuz.zsh-theme
+
+  target=~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting
+  if [[ ! -d "$target"/.git ]]; then
+    git clone -q git://github.com/zsh-users/zsh-syntax-highlighting.git "$target"
+  else
+    cd "$target" || {
+      echo "Can not find directory" "$target"
+      exit 1
+    }
+    git reset -q --hard origin/master
+    git pull -q --rebase
+  fi
+
+  target=~/.oh-my-zsh/custom/plugins/zsh-completions
+  if [[ ! -d "$target"/.git ]]; then
+    git clone -q https://github.com/zsh-users/zsh-completions "$target"
+  else
+    cd "$target" || {
+      echo "Can not find directory" "$target"
+      exit 1
+    }
+    git reset -q --hard origin/master
+    git pull -q --rebase
+  fi
+  echo "Done"
+
+  printf "\nSourcing zshrc...\n"
+  zsh -c "source ~/.zshrc"
+  echo "Done"
+}
+
+function main () {
+  require git
+  if [ $? -ne 0 ]; then
+    echo "git not found. Aborting"
+    exit 1
+  fi
+  source_dir="$(pwd)"
+
+  configfiles
+  bins
+  installvim
+  installzsh
+
+  printf "\nBootstrap completed\n"
+  exit 0
+}
+
+main

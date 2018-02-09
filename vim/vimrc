@@ -1,0 +1,413 @@
+silent! runtime bundles.vim
+
+filetype on
+filetype plugin on
+filetype indent on
+set title
+set cursorline
+set relativenumber
+set number
+set ruler
+set colorcolumn=80,120
+syntax on
+
+if !has('nvim')
+  " internal encoding
+  set encoding=utf-8
+  set backspace=indent,eol,start
+  set autoindent
+  set ttyfast
+  set noerrorbells visualbell t_vb=
+  autocmd GUIEnter * set visualbell t_vb=
+  set mouse=nicr
+  " Auto read if file is changed outside
+  set autoread
+endif
+
+set guifont="Input"
+
+" Enable per project config files
+set exrc
+set modeline
+set secure
+
+" Always set file encoding to utf-8
+set fileencoding=utf-8
+
+set expandtab smarttab
+set tabstop=2 softtabstop=2 shiftwidth=2
+
+" Highlight search results while typing
+set incsearch
+
+set viminfo="NONE"
+
+" Don't add empty newlines at the end of files
+set noeol
+
+" Set leaderkey timeout
+set timeoutlen=500
+
+" I don't like the cursor moving left when I exit from insert mode
+inoremap <Esc> <Esc>`^
+
+" Allows going a character after end of the line
+set virtualedit=onemore
+
+" Arrow keys in insert mode
+imap <ESC>oA <ESC>ki
+imap <ESC>oB <ESC>ji
+imap <ESC>oC <ESC>li
+imap <ESC>oD <ESC>hi
+
+" Auto completion
+set wildchar=<Tab> wildmenu wildmode=list:full
+
+" tagbar
+nmap <F8> :TagbarToggle<CR>
+let g:tagbar_autofocus = 1
+let g:airline#extensions#tagbar#enabled = 0
+let g:tagbar_sort = 0
+
+" ctrlp
+let g:ctrlp_match_window = 'bottom,order:btt'
+let g:ctrlp_switch_buffer = 0
+let g:ctrlp_working_path_mode = 'ra'
+let g:ctrlp_custom_ignore = '\v[\/](node_modules|target|dist|compiled)|(\.(swp|ico|git|svn))$'
+let g:ctrlp_use_caching = 0
+if executable('ag')
+  " set grepprg=ag\ --nogroup\ --nocolor
+  let g:ctrlp_user_command = 'ag %s -l --nocolor -g ""'
+endif
+
+" JSDoc generation
+let g:jsdoc_default_mapping = 0
+noremap <Leader>j :JsDoc<cr>
+
+" vim-move
+" for terms that send Alt as Escape sequence
+" see http://vim.wikia.com/wiki/Mapping_fast_keycodes_in_terminal_Vim
+" for why the <F20> hack. Keeps Esc from waiting for other keys to exit
+" visual
+let g:move_map_keys = 0
+set <F20>=j
+set <F21>=k
+vmap <F20> <Plug>MoveBlockDown
+vmap <F21> <Plug>MoveBlockUp
+nmap <F20> <Plug>MoveLineDown
+nmap <F21> <Plug>MoveLineUp
+
+" Have the indent commands re-highlight the last visual selection to make
+" multiple indentations easier
+vnoremap > >gv
+vnoremap < <gv
+
+" Set scroll to cursor when moving vertically
+set scrolloff=2
+
+" always show the status line
+set laststatus=2
+
+" clipboard
+"  On Debian and Ubuntu, to obtain clipboard support install the packages
+"  vim-gtk or vim-gnome (not vim-tiny)
+set clipboard=unnamedplus
+
+" persistent undo dir
+set undodir=~/.vim/undo
+" persistent undo regardless of buffer unload
+set undofile
+" many levels of undo
+set undolevels=1000
+
+" directory to place swap files in
+set directory=~/.vim/tmp
+
+" Launch nerdtree at start if no files are passed in as parameter
+" autocmd StdinReadPre * let s:std_in=1
+" autocmd VimEnter * if argc() == 0 && !exists("s:std_in") | NERDTree | endif
+" ctrl-n opens nerdtree
+map <C-n> :NERDTreeToggle<CR>
+" close vim if nerdtree is the only window open
+autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTreeType") && b:NERDTreeType == "primary") | q | endif
+
+au BufReadPost *.config set syntax=yaml
+au BufReadPost *.config set filetype=yaml
+
+au BufReadPost Jenkinsfile set syntax=groovy
+au BufReadPost Jenkinsfile set filetype=groovy
+
+au BufReadPost Dockerfile.* set syntax=dockerfile
+au BufReadPost Dockerfile.* set filetype=dockerfile
+
+" Enable italics
+set t_ZH=[3m
+set t_ZR=[23m
+
+" Enable underline
+" set t_ue=4m
+" set t_us=24m
+
+let g:gruvbox_improved_warnings=1
+let g:gruvbox_italic=1
+let g:gruvbox_underline=1
+let g:gruvbox_undercurl=0
+let g:gruvbox_contrast_dark="medium"
+let g:gruvbox_contrast_light="hard"
+let g:nord_italic_comments = 1
+if filereadable(expand("~/.vimrc_background"))
+  let base16colorspace=256
+  source ~/.vimrc_background
+else
+  set background=dark
+  colorscheme nord
+  let g:airline_theme = 'nord'
+endif
+
+" nord override
+highlight Comment ctermfg=gray
+
+let g:rainbow_active = 1
+
+let g:delimitMate_expand_cr = 1
+let g:delimitMate_expand_space = 1
+
+" set cursor shapes by mode
+" let &t_SI = '[5 q'
+" let &t_SR = '[4 q'
+" let &t_EI = '[3 q'
+"
+" if has("autocmd")
+"   au VimEnter,InsertLeave * silent execute '!echo -ne "\e[2 q"' | redraw!
+"   au InsertEnter,InsertChange *
+"     \ if v:insertmode == 'i' |
+"     \   silent execute '!echo -ne "\e[5 q"' | redraw! |
+"     \ elseif v:insertmode == 'r' |
+"     \   silent execute '!echo -ne "\e[4 q"' | redraw! |
+"     \ endif
+"   au VimLeave * silent execute '!echo -ne "\e[ q"' | redraw!
+" endif
+
+" 'Nothing' background
+" hi Normal ctermbg=none
+" 'Nothing' background where text does not exist
+" highlight NonText ctermbg=none
+
+if &term =~ '256color'
+    " disable Background Color Erase (BCE) so that color schemes
+    " render properly when inside 256-color tmux and GNU screen.
+    " see also http://snk.tuxfamily.org/log/vim-256color-bce.html
+    set t_ut=
+endif
+
+" Airline
+if !exists('g:airline_symbols')
+  let g:airline_symbols = {}
+endif
+let g:airline_powerline_fonts = 1
+let g:airline_left_sep = ''
+let g:airline_left_alt_sep = ''
+let g:airline_right_sep = ''
+let g:airline_right_alt_sep = ''
+let g:airline_symbols.branch = ''
+let g:airline_symbols.readonly = ''
+let g:airline_symbols.linenr = ''
+
+" JSX
+let g:jsx_ext_required = 0
+
+" autoformat
+let g:formatters_javascript = [ 'standard_javascript' ]
+let g:formatdef_standard_javascript = '"semistandard --fix --stdin 2>/dev/null"'
+autocmd FileType javascript noremap <Leader>f :Autoformat<CR>
+autocmd FileType javascript vnoremap <buffer> <C-f> :Autoformat<CR>
+autocmd FileType json noremap <Leader>f :Autoformat<CR>
+autocmd FileType json vnoremap <buffer> <C-f> :Autoformat<CR>
+
+" tern
+autocmd FileType javascript setlocal omnifunc=tern#Complete
+let g:tern_show_argument_hints = 'on_hold'
+let g:tern_map_keys = 1
+let g:tern_show_signature_in_pum = 1
+
+" ale
+nmap <silent> <leader>s <Plug>(ale_toggle)
+nmap <silent> <C-k> <Plug>(ale_previous_wrap)
+nmap <silent> <C-j> <Plug>(ale_next_wrap)
+let g:ale_maximum_file_size=100000
+let g:ale_completion_enabled = 1
+let g:ale_javascript_standard_executable = 'semistandard'
+let g:ale_javascript_standard_use_global = 1
+if executable('eslint_d')
+  let g:ale_javascript_eslint_use_global = 1
+  let g:ale_javascript_eslint_executable='eslint_d'
+endif
+let g:ale_linters = {
+\ 'javascript': [ 'eslint', 'standard' ],
+\ 'vim': [ 'vint' ],
+\ 'zsh': [ 'shellcheck' ]
+\ }
+let g:ale_open_list = 1
+let g:ale_sign_column_always = 1
+let g:ale_sign_error = '✖'
+let g:ale_sign_warning = '⚠'
+let g:ale_vim_vint_show_style_issues = 1
+
+" Show gutter column
+let signcolumn=1
+
+" syntastic
+" let g:airline#extensions#syntastic#enabled = 0
+"
+" nmap <silent> <leader>s :call SyntasticToggleMode()<CR>
+" let g:syntastic_aggregate_errors = 1
+" let g:syntastic_warning_symbol = '✕'
+" let g:syntastic_error_symbol = '✖'
+" let g:syntastic_style_warning_symbol = '⚠'
+" let g:syntastic_style_error_symbol = '✗'
+" let g:syntastic_always_populate_loc_list = 1
+" let g:syntastic_auto_loc_list = 1
+" let g:syntastic_check_on_open = 1
+" let g:syntastic_check_on_wq = 0
+" let g:syntastic_javascript_checkers = [ 'eslint' ]--with-features=huge
+" let g:syntastic_javascript_standard_exec = 'semistandard'
+" " end syntastic
+"
+let g:ycm_global_ycm_extra_conf = '~/.vim/ycm_extra_conf.py'
+let g:ycm_autoclose_preview_window_after_insertion = 1
+let g:ycm_autoclose_preview_window_after_completion = 1
+let g:ycm_error_symbol = '✖'
+let g:ycm_warning_symbol = '✕'
+let g:ycm_complete_in_comments = 1
+let g:ycm_seed_identifiers_with_syntax = 1
+let g:ycm_always_populate_location_list = 1
+let g:ycm_open_loclist_on_ycm_diags = 1
+" end ycm
+
+let g:diminactive_enable_focus = 1
+let g:diminactive_use_syntax = 1
+let g:diminactive_use_colorcolumn = 0
+
+" <Leader>cC      <Plug>Colorizer     Toggle highlighting of Colors. In visual
+" <Leader>cT      <Plug>ColorContrast
+" <Leader>cF      <Plug>ColorFgBg
+let g:colorizer_auto_map = 1
+
+nnoremap <Leader>i :DimInactiveToggle<cr>
+
+set viewoptions="folds,cursor"
+set foldnestmax=1
+" skip closed folds
+set foldopen-=block
+
+" toggle between number and relativenumber
+function! ToggleNumber()
+  if(&relativenumber == 1)
+    set norelativenumber
+    set number
+  else
+    set relativenumber
+  endif
+endfunction
+nnoremap <Leader>n :call ToggleNumber()<CR>
+
+" Begin trim spaces
+function! ShowSpaces(...)
+  let @/='\v(\s+$)|( +\ze\t)'
+  let oldhlsearch=&hlsearch
+  if !a:0
+    let &hlsearch=!&hlsearch
+  else
+    let &hlsearch=a:1
+  end
+  return oldhlsearch
+endfunction
+
+function! TrimSpaces() range
+  let oldhlsearch=ShowSpaces(1)
+  execute a:firstline.",".a:lastline."substitute ///gec"
+  let &hlsearch=oldhlsearch
+endfunction
+
+command! -bar -nargs=? ShowSpaces call ShowSpaces(<args>)
+command! -bar -nargs=0 -range=% TrimSpaces <line1>,<line2>call TrimSpaces()
+nnoremap <F12> :ShowSpaces<CR>
+nnoremap <S-F12> m`:TrimSpaces<CR>``
+vnoremap <S-F12> :TrimSpaces<CR>
+" End trim spaces
+
+" Begin session management
+let g:session_autoload = 'no'
+" Auto save on leave
+let g:session_autosave = 'yes'
+let g:session_autosave_periodic = 2
+let g:session_autosave_silent = 1
+let g:session_verbose_messages = 0
+let g:session_persist_colors = 1
+let g:session_persist_font = 0
+
+function! FindProjectName()
+  let l:name = getcwd()
+  if !isdirectory(".git")
+    let l:name = substitute(finddir(".git", ".;"), "/.git", "", "")
+  end
+  if l:name == ""
+    return l:name
+  end
+  " Grab directory name
+  let l:name = matchstr(l:name, ".*", strridx(l:name, "/") + 1)
+  return fnameescape(l:name)
+endfunction
+
+function! RestoreSession(...)
+  if a:0 > 0
+    let l:name = a:1
+  else
+    let l:name = FindProjectName()
+  end
+  " Create or load session automatically only if directory is tracked by git
+  if l:name != ""
+    let l:fullname = expand(g:session_directory . '/' . l:name . g:session_extension)
+    if filereadable(l:fullname)
+      execute 'source ' . l:fullname
+    else
+      execute 'SaveSession ' . l:name
+    end
+  end
+endfunction
+
+" Sessions only restored if we start Vim without args.
+if argc() == 0
+  autocmd VimEnter * call RestoreSession()
+end
+" End session management
+
+function! GetBufferList()
+  redir =>buflist
+  silent! ls!
+  redir END
+  return buflist
+endfunction
+
+function! ToggleList(bufname, pfx)
+  let buflist = GetBufferList()
+  for bufnum in map(filter(split(buflist, '\n'), 'v:val =~ "'.a:bufname.'"'), 'str2nr(matchstr(v:val, "\\d\\+"))')
+    if bufwinnr(bufnum) != -1
+      exec(a:pfx.'close')
+      return
+    endif
+  endfor
+  if a:pfx == 'l' && len(getloclist(0)) == 0
+      echohl ErrorMsg
+      echo "Location List is Empty."
+      return
+  endif
+  let winnr = winnr()
+  exec(a:pfx.'open')
+  if winnr() != winnr
+    wincmd p
+  endif
+endfunction
+
+nmap <silent> <leader>l :call ToggleList("Location List", 'l')<CR>
+nmap <silent> <leader>e :call ToggleList("Quickfix List", 'c')<CR>

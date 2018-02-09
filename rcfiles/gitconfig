@@ -1,0 +1,28 @@
+; vim: set ft=dosini :
+[user]
+  email = behcet@dolm.us
+  name = Behcet
+[alias]
+  aliases = !git config --get-regexp 'alias.*' | colrm 1 6 | sed 's/[ ]/ = /' | sort
+    # Follow evolution of certain lines in a file
+    # arg1=file, arg2=first line, arg3=last line or blank for just the first line
+  follow = "!sh -c 'git log --topo-order -u -L $2,${3:-$2}:"$1"'" -
+  pretty = format:%C(yellow)%h %Cblue%>(12)%ad %Cgreen%<(7)%aN%Cred%d %Creset%s
+  show-future = log ..@{u}
+  show-unpushed = log --branches --not --remotes
+  log-pretty = "log --color --graph --abbrev-commit --pretty=format:'%Cred%h%Creset %Cgreen(%cr) -%C(yellow)%d%Creset %s %C(bold blue)<%an>%Creset'"
+  log-pretyy-all = "log --oneline --decorate --graph --all --pretty=format:'%Cred%h%Creset %Cgreen(%cr) -%C(yellow)%d%Creset %s %C(bold blue)<%an>%Creset'"
+[log]
+  decorate = full
+[merge]
+  # ff = only
+  # conflictstyle = diff3
+[push]
+  default = simple
+  followTags = true
+[transfer]
+  # fsckobjects = true
+[status]
+  showUntrackedFiles = all
+[core]
+  editor = vim

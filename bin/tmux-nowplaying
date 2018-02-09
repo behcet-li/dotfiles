@@ -1,0 +1,18 @@
+#! /bin/sh
+
+WIDTH=${1}
+
+MEDIUM=140
+
+if [ ! -z "$WIDTH" ] && [ "$WIDTH" -gt "$MEDIUM" ]; then
+  SP=$(sp current)
+  ARTIST=$(echo "$SP" | grep ^Artist | sed 's/Artist\s*//g')
+  SONG=$(echo "$SP" | grep ^Title | sed 's/Title\s*//g')
+  NOWPLAYING="♫ $ARTIST - $SONG"
+  # do not display if we can't parse it correctly
+  if [ -z "$ARTIST" ] || [ -z "$SONG" ]; then
+    NOWPLAYING=$(rhythmbox-client --no-start --print-playing)
+  fi
+fi
+
+echo "$NOWPLAYING"
